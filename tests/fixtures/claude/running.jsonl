@@ -1,0 +1,2 @@
+{"type": "user", "cwd": "/work/bookshelf-app", "timestamp": "2026-01-05T10:00:00+00:00", "message": {"content": "Add CSV export"}}
+{"type": "assistant", "timestamp": "2026-01-05T10:00:00+00:00", "message": {"content": [{"type": "text", "text": "Checking."}, {"type": "tool_use", "name": "Bash", "input": {"command": "check export"}}], "stop_reason": "tool_use"}}

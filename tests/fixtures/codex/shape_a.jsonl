@@ -1,0 +1,5 @@
+{"type": "session_meta", "timestamp": "2026-01-05T10:00:00+00:00", "payload": {"id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2", "cwd": "/work/bookshelf-app", "source": "cli"}}
+{"type": "event_msg", "timestamp": "2026-01-05T10:00:00+00:00", "payload": {"type": "task_started"}}
+{"type": "event_msg", "timestamp": "2026-01-05T10:00:00+00:00", "payload": {"type": "item_completed", "item": {"type": "UserMessage", "content": [{"type": "text", "text": "Add CSV export"}]}}}
+{"type": "event_msg", "timestamp": "2026-01-05T10:00:00+00:00", "payload": {"type": "item_completed", "item": {"type": "AgentMessage", "content": [{"type": "text", "text": "Export added."}]}}}
+{"type": "event_msg", "timestamp": "2026-01-05T10:00:00+00:00", "payload": {"type": "task_complete", "last_agent_message": "Export added."}}

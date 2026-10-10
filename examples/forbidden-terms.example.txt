@@ -1,0 +1,3 @@
+example-private-name
+example-internal-host
+example-project-codename

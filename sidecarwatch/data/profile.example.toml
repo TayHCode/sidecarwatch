@@ -1,0 +1,15 @@
+name = "bookshelf"
+paths = ["~/code/bookshelf-app"]     # folders or repository roots
+match = []                           # optional substrings of the working folder (review scope only)
+
+goal = """
+Add CSV export to the reading-list page. Nothing else.
+"""
+in_scope = ["The export button and its endpoint", "Tests for the export"]
+out_of_scope = ["Authentication", "Database schema changes"]
+decided = ["Use the standard csv module, no new dependency"]
+ask_me = ["Anything that touches user data already stored"]
+rules = ["No new abstractions for a single use"]
+
+[auto_reply]
+allow = false

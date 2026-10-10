@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sidecarwatch"
+version = "0.1.0"
+description = "A local second pair of eyes for coding sessions"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "TayHCode"}]
+dependencies = []
+
+[project.scripts]
+sidecarwatch = "sidecarwatch:entry"
+
+[tool.setuptools]
+packages = ["sidecarwatch"]
+
+[tool.setuptools.package-data]
+sidecarwatch = ["data/*"]

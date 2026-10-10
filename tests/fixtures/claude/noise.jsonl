@@ -1,0 +1,9 @@
+{"type": "user", "isMeta": true, "message": {"content": "skip meta"}}
+{"type": "user", "isSidechain": true, "message": {"content": "skip child"}}
+{"type": "user", "isCompactSummary": true, "message": {"content": "skip compact"}}
+{"type": "summary", "summary": "skip summary"}
+{"type": "user", "message": {"content": "<command-name>/help"}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "content": "TOOL_OUTPUT_ONLY"}]}}
+broken
+{
+{"type": "unknown"}

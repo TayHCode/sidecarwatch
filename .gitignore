@@ -1,0 +1,9 @@
+state/
+digest/
+__pycache__/
+*.log
+.scratch/
+build/
+dist/
+*.egg-info/
+.venv/

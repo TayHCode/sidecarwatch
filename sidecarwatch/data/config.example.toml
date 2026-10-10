@@ -1,0 +1,55 @@
+[privacy]
+allow_cross_vendor_review = false # explicit consent only; status shows this choice
+
+[discovery]
+window_hours = 24
+quiet_seconds = 60
+
+[watch]
+only = []                       # profile names or folders
+
+[reviewer]
+timeout_seconds = 300            # ceiling 600
+max_per_hour = 20               # ceiling 60
+max_per_run = 100               # ceiling 500
+
+[reviewer.claude]
+command = "claude"
+model = ""                      # empty: the CLI's own default
+extra_args = []                 # reviewer arguments are fixed
+
+[reviewer.codex]
+command = "codex"
+model = ""
+extra_args = []                 # reviewer arguments are fixed
+
+[digest]
+max_chars = 12000               # ceiling 40000
+recent_events = 15
+
+[auto_reply]                    # limits only; nothing here turns it on
+max_turns = 5                   # ceiling 50
+min_gap_seconds = 120           # floor 30
+max_per_session_per_hour = 6    # ceiling 20
+max_per_folder_per_day = 30     # ceiling 100
+max_per_run = 40                # ceiling 200
+
+[delivery]
+codex_queue = false              # used only with --auto-reply --live
+claude_resume = false           # opt-in; see README warning
+turn_timeout_seconds = 1800      # ceiling 3600
+
+[delivery.claude]
+extra_args = []                 # e.g. ["--permission-mode", "acceptEdits"]
+
+[scrub]
+emails = true
+extra_patterns = []             # regular expressions
+extra_terms = []                # literal strings
+
+[never]
+extra_patterns = []             # regular expressions; category "custom"
+
+[log]
+text = "verdict"                # "none" | "verdict" | "digest"
+max_bytes = 5000000

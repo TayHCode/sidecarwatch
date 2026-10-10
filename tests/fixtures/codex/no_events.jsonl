@@ -1,0 +1,2 @@
+{"type": "response_item", "payload": {"type": "message", "role": "user", "content": [{"text": "Add CSV export"}]}}
+{"type": "response_item", "payload": {"type": "message", "role": "assistant", "content": [{"text": "Export added."}]}}

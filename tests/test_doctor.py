@@ -20,3 +20,25 @@ class DoctorTests(unittest.TestCase):
             self.assertFalse(value['clis']['codex']['delivery'])
             self.assertFalse(value['clis']['claude']['delivery'])
             self.assertIn('event_msg/user_message',out)
+
+    def test_doctor_reports_required_reviewer_flags(self):
+        with Sandbox() as sb:
+            code, out, err = sb.cli(['doctor', '--json'])
+            self.assertEqual(code, 0, err)
+            clis = json.loads(out)['clis']
+            for flag in ('-p', '--output-format'):
+                self.assertTrue(clis['claude']['reviewer_flags'][flag])
+            for flag in ('-s', '--color', '-C', '-o'):
+                self.assertTrue(clis['codex']['reviewer_flags'][flag])
+
+    def test_doctor_rejects_missing_required_codex_flags(self):
+        for flag, capability in (('--color', 'color control'), ('-C', 'working directory'),
+                                 ('-o', 'answer file')):
+            with self.subTest(flag=flag), Sandbox() as sb:
+                (sb.fake/'missing-flag').write_text(flag)
+                code, out, err = sb.cli(['doctor', '--json'])
+                self.assertEqual(code, 0, err)
+                row = json.loads(out)['clis']['codex']
+                self.assertFalse(row['found'])
+                self.assertFalse(row['reviewer_flags'][flag])
+                self.assertIn(capability, row['reviewer']['reason'])

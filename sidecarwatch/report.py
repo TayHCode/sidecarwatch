@@ -116,7 +116,10 @@ def doctor(cfg, state, homes, config_path, config_dir, items, as_json, shapes):
     from pathlib import Path
     probe = Capabilities(cfg)
     result = {'version': __version__, 'state_folder': str(state.root), 'kill_switch': state.stopped(), 'cross_vendor_review': cfg['privacy']['allow_cross_vendor_review'], 'config': str(config_path) if config_path.exists() else '(none)', 'profiles': [str(p) for p in sorted((config_dir/'profiles').glob('*.toml'))], 'clis': {}}
-    flags = ('--no-session-persistence', '--json-schema', '--tools', '--system-prompt', '--ephemeral', '--output-schema', '--skip-git-repo-check')
+    flags = ('-p', '--print', '--output-format', '-s', '--sandbox', '--color', '-C', '--cd',
+             '-o', '--output-last-message', '--model', '-m', '--no-session-persistence',
+             '--json-schema', '--tools', '--system-prompt', '--ephemeral', '--output-schema',
+             '--skip-git-repo-check')
     for agent in ('claude', 'codex'):
         try:
             code, version = run([cfg['reviewer'][agent]['command'], '--version'])
@@ -126,7 +129,7 @@ def doctor(cfg, state, homes, config_path, config_dir, items, as_json, shapes):
         found = [s for s in items if s.agent == agent]
         status = probe.status(agent)
         scan = str(homes[agent] / ('projects/*/*.jsonl' if agent == 'claude' else 'sessions/**/rollout-*.jsonl'))
-        row = {'found': status['ready'], 'version': version.strip() if code == 0 else '', 'home': str(homes[agent]), 'scan': scan, 'sessions': len(found), 'reviewer': status, 'reviewer_flags': {flag: flag in help_text for flag in flags}, 'delivery': Delivery(cfg, state, probe).available(Session(agent, '', Path('.'), cwd=str(Path.cwd())))}
+        row = {'found': status['ready'], 'version': version.strip() if code == 0 else '', 'home': str(homes[agent]), 'scan': scan, 'sessions': len(found), 'reviewer': status, 'reviewer_flags': {flag: bool(re.search(r'(?<![\w-])' + re.escape(flag) + r'(?![\w-])', help_text)) for flag in flags}, 'delivery': Delivery(cfg, state, probe).available(Session(agent, '', Path('.'), cwd=str(Path.cwd())))}
         if shapes:
             counts = {}
             for s in found:

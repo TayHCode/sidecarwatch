@@ -20,7 +20,10 @@ if '--help' in args:
     elif (root/'old-help').exists():
         print('--print -p --output-format exec -o -s --color -C')
     else:
-        print('auth login status --output-format -s --color -C -o --print -p --resume --no-session-persistence --json-schema --tools --system-prompt exec --ephemeral --output-schema --skip-git-repo-check queue --thread --message')
+        help_text = 'auth login status --output-format -s --color -C -o --print -p --resume --no-session-persistence --json-schema --tools --system-prompt exec --ephemeral --output-schema --skip-git-repo-check queue --thread --message'
+        if (root/'missing-flag').exists():
+            help_text = help_text.replace(' ' + (root/'missing-flag').read_text() + ' ', ' ')
+        print(help_text)
 elif 'status' in args:
     if (root/'logged-out').exists():
         print(json.dumps({'loggedIn': False}))
@@ -32,6 +35,8 @@ else:
     if (root/'sleep').exists():
         time.sleep(float((root/'sleep').read_text()))
     status = int((root/'exit-code').read_text()) if (root/'exit-code').exists() else 0
+    if (root/'stderr').exists():
+        print((root/'stderr').read_text(), file=sys.stderr)
     if status or 'queue' in args or '--resume' in args:
         sys.exit(status)
     if (root/'bad-output').exists():

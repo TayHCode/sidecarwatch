@@ -85,6 +85,61 @@ class ReviewerTests(unittest.TestCase):
             with self.assertRaisesRegex(ReviewError,'same CLI'):
                 ClaudeReviewer(cfg,State(sb.root/'own')).review(REVIEWER_PROMPT,'DATA')
 
+    def test_nonzero_reviewer_reports_exit_and_stderr_without_login_guess(self):
+        for service in (ClaudeReviewer, CodexReviewer):
+            with self.subTest(service=service.agent), Sandbox() as sb:
+                (sb.fake/'exit-code').write_text('3')
+                (sb.fake/'stderr').write_text('Model unavailable\nTry a different model.')
+                cfg = merge(DEFAULTS, {'privacy': {'allow_cross_vendor_review': True}})
+                reviewer = service(cfg, State(sb.root/'own'))
+                self.assertEqual(reviewer.probe.status(service.agent)['login'], 'logged-in')
+                with self.assertRaises(ReviewError) as caught:
+                    reviewer.review(REVIEWER_PROMPT, 'DATA')
+                message = str(caught.exception)
+                self.assertIn('exit status 3', message)
+                self.assertIn('stderr: Model unavailable Try a different model.', message)
+                self.assertNotIn('login', message)
+                self.assertNotIn('log in', message)
+
+    def test_nonzero_reviewer_login_advice_requires_authentication_evidence(self):
+        for service in (ClaudeReviewer, CodexReviewer):
+            with self.subTest(service=service.agent), Sandbox() as sb:
+                (sb.fake/'exit-code').write_text('7')
+                (sb.fake/'stderr').write_text('Authentication required: please log in.')
+                cfg = merge(DEFAULTS, {'privacy': {'allow_cross_vendor_review': True}})
+                with self.assertRaises(ReviewError) as caught:
+                    service(cfg, State(sb.root/'own')).review(REVIEWER_PROMPT, 'DATA')
+                self.assertIn('exit status 7', str(caught.exception))
+                self.assertIn('check CLI login', str(caught.exception))
+
+    def test_nonzero_reviewer_scrubs_before_shortening_stderr(self):
+        for service in (ClaudeReviewer, CodexReviewer):
+            with self.subTest(service=service.agent), Sandbox() as sb:
+                private = text_parts('gh', 'p_', 'B'*36)
+                (sb.fake/'exit-code').write_text('9')
+                (sb.fake/'stderr').write_text('Model unavailable\n' + private + '\nLOCAL_MARKER ' + 'x '*40000)
+                cfg = merge(DEFAULTS, {'privacy': {'allow_cross_vendor_review': True},
+                                       'scrub': {'extra_terms': ['LOCAL_MARKER']}})
+                with self.assertRaises(ReviewError) as caught:
+                    service(cfg, State(sb.root/'own')).review(REVIEWER_PROMPT, 'DATA')
+                message = str(caught.exception)
+                self.assertIn('exit status 9', message)
+                self.assertNotIn(private, message)
+                self.assertNotIn('LOCAL_MARKER', message)
+                self.assertIn('[REDACTED:', message)
+                self.assertLess(len(message), 600)
+                self.assertNotIn('login', message)
+
+    def test_nonzero_reviewer_without_stderr_reports_that_fact(self):
+        with Sandbox() as sb:
+            (sb.fake/'exit-code').write_text('4')
+            cfg = merge(DEFAULTS, {'privacy': {'allow_cross_vendor_review': True}})
+            with self.assertRaises(ReviewError) as caught:
+                ClaudeReviewer(cfg, State(sb.root/'own')).review(REVIEWER_PROMPT, 'DATA')
+            self.assertIn('exit status 4', str(caught.exception))
+            self.assertIn('no stderr', str(caught.exception))
+            self.assertNotIn('login', str(caught.exception))
+
     def test_duplicate_keys_rejected_at_every_depth_and_envelope(self):
         for key, first, last in [('reply', 'YES', ''), ('nudge_type', 'release', 'continue'),
                                  ('needs_user_topics', ['money'], []), ('reply_kind', 'needs_user', 'nudge'),

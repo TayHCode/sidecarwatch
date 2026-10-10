@@ -32,6 +32,8 @@ else:
     if (root/'sleep').exists():
         time.sleep(float((root/'sleep').read_text()))
     status = int((root/'exit-code').read_text()) if (root/'exit-code').exists() else 0
+    if (root/'stderr').exists():
+        print((root/'stderr').read_text(), file=sys.stderr)
     if status or 'queue' in args or '--resume' in args:
         sys.exit(status)
     if (root/'bad-output').exists():

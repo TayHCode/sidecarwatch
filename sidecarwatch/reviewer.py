@@ -1,4 +1,4 @@
-import json, os
+import json, os, re
 from pathlib import Path
 import subprocess, tempfile, time
 from . import PREFIX
@@ -60,12 +60,12 @@ def validate(value, cfg=None, profile=None):
 def child_env():
     return {**{k: v for k, v in os.environ.items() if k not in ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY', 'CODEX_API_KEY')}, PREFIX + 'ACTIVE': '1'}
 
-def run(argv, data=None, *, cwd=None, timeout=10, state=None, discard=False):
+def run(argv, data=None, *, cwd=None, timeout=10, state=None, discard=False, error_cfg=None):
     if state:
         state.check()
     child = None
     try:
-        child = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL if discard else subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, cwd=cwd, env=child_env())
+        child = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL if discard else subprocess.PIPE, stderr=subprocess.PIPE if error_cfg is not None else subprocess.DEVNULL, text=True, errors='replace', cwd=cwd, env=child_env())
         deadline = time.monotonic() + timeout
         while True:
             if state:
@@ -74,7 +74,22 @@ def run(argv, data=None, *, cwd=None, timeout=10, state=None, discard=False):
             if remaining <= 0:
                 raise ReviewError('CLI timed out')
             try:
-                out, _ = child.communicate(data, timeout=min(2, remaining))
+                out, err = child.communicate(data, timeout=min(2, remaining))
+                if child.returncode and error_cfg is not None:
+                    # Scrub the complete diagnostic before taking a display gist.
+                    clean = scrub(err or '', error_cfg)
+                    clean = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', clean)
+                    clean = ''.join(c for c in clean if c.isprintable() or c.isspace())
+                    clean = ' '.join(clean.split())
+                    login = any(hint in (err or '').lower() for hint in (
+                        'not logged in', 'authentication required', 'authentication failed',
+                        'please log in', 'please login', 'invalid api key', 'expired credentials'))
+                    gist = clean[:400] + ('...' if len(clean) > 400 else '')
+                    message = f'reviewer failed with exit status {child.returncode}; '
+                    message += 'stderr: ' + gist if gist else 'no stderr diagnostic'
+                    if login:
+                        message += '; check CLI login'
+                    raise ReviewError(message)
                 return child.returncode, out or ''
             except subprocess.TimeoutExpired:
                 data = None
@@ -115,7 +130,9 @@ class Capabilities:
             ('exec mode', ('exec',)), ('read-only sandbox', ('--sandbox', '-s')),
             ('color control', ('--color',)), ('working directory', ('--cd', '-C')),
             ('answer file', ('--output-last-message', '-o'))]
-        missing = [name for name, choices in required if not any(flag in (top if name == 'exec mode' else mode) for flag in choices)]
+        missing = [name for name, choices in required if not any(
+            re.search(r'(?<![\w-])' + re.escape(flag) + r'(?![\w-])',
+                      top if name == 'exec mode' else mode) for flag in choices)]
         login, reason = 'unverified', ''
         if not top:
             reason = 'CLI executable unavailable or --help failed; check the configured command (or use --reviewer with the same CLI)'
@@ -204,9 +221,8 @@ class CLIReviewer:
                 if settings['model']:
                     argv += ['-m', settings['model']]
             argv += settings['extra_args'] + (['-'] if self.agent == 'codex' else [])
-            code, output = run(argv, data, cwd=cwd, timeout=self.cfg['reviewer']['timeout_seconds'], state=self.state)
-            if code:
-                raise ReviewError('reviewer failed; check CLI login')
+            code, output = run(argv, data, cwd=cwd, timeout=self.cfg['reviewer']['timeout_seconds'], state=self.state,
+                               error_cfg=self.cfg['scrub'])
             if self.agent == 'codex':
                 try:
                     return answer(answer_path.read_text())
@@ -214,7 +230,7 @@ class CLIReviewer:
                     raise ReviewError('missing reviewer answer; run doctor and check CLI version/capabilities and local login') from exc
             result = answer(output)
             if result.get('is_error'):
-                raise ReviewError('reviewer failed; check CLI login')
+                raise ReviewError('reviewer returned an error; run doctor and inspect CLI diagnostics')
             return result['structured_output'] if isinstance(result.get('structured_output'), dict) else answer(result.get('result', ''))
 
 class ClaudeReviewer(CLIReviewer):
